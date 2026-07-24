@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Check, X, Trophy, RotateCcw, Brain } from "lucide-react";
 import { dummyQuiz } from "@/lib/dummy-data";
+import { loadStudySet } from "@/lib/study-store";
 
 export const Route = createFileRoute("/quiz")({
   head: () => ({
@@ -15,12 +16,47 @@ export const Route = createFileRoute("/quiz")({
   component: Quiz,
 });
 
+type QQ = {
+  question: string;
+  choices: string[];
+  correctIndex: number;
+  explanation?: string;
+  difficulty?: string;
+};
+
+const LETTERS = ["A", "B", "C", "D"] as const;
+
 function Quiz() {
-  const questions = dummyQuiz;
+  const [questions, setQuestions] = useState<QQ[]>(() =>
+    dummyQuiz.map((q) => ({
+      question: q.question,
+      choices: q.choices,
+      correctIndex: q.correctIndex,
+    })),
+  );
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    const set = loadStudySet();
+    if (set && set.quiz.length > 0) {
+      setQuestions(
+        set.quiz.map((q) => {
+          const choices = LETTERS.map((l) => q.options[l]);
+          const correctIndex = LETTERS.indexOf(q.correctAnswer);
+          return {
+            question: q.question,
+            choices,
+            correctIndex: correctIndex >= 0 ? correctIndex : 0,
+            explanation: q.explanation,
+            difficulty: q.difficulty,
+          };
+        }),
+      );
+    }
+  }, []);
 
   const q = questions[index];
   const progress = ((index + (selected !== null ? 1 : 0)) / questions.length) * 100;
@@ -106,6 +142,11 @@ function Quiz() {
         </div>
 
         <div className="rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
+          {q.difficulty && (
+            <div className="mb-2 inline-flex rounded-full border border-border bg-background px-2 py-0.5 text-[10px] uppercase tracking-widest text-muted-foreground">
+              {q.difficulty}
+            </div>
+          )}
           <h2 className="text-lg font-medium sm:text-xl">{q.question}</h2>
 
           <div className="mt-5 flex flex-col gap-2">
@@ -125,7 +166,7 @@ function Quiz() {
               }
               return (
                 <button key={i} onClick={() => pick(i)} className={cls} disabled={selected !== null}>
-                  <span>{choice}</span>
+                  <span><span className="mr-2 text-muted-foreground">{LETTERS[i]}.</span>{choice}</span>
                   {selected !== null && isCorrect && <Check className="h-4 w-4 text-[color:var(--success)]" />}
                   {selected !== null && isPicked && !isCorrect && <X className="h-4 w-4 text-destructive" />}
                 </button>
@@ -134,7 +175,7 @@ function Quiz() {
           </div>
 
           {selected !== null && (
-            <div className="mt-5 flex items-center justify-between gap-3">
+            <div className="mt-5 flex flex-col gap-3">
               <div className="text-sm">
                 {selected === q.correctIndex ? (
                   <span className="text-[color:var(--success)]">Correct!</span>
@@ -142,12 +183,19 @@ function Quiz() {
                   <span className="text-destructive">Not quite.</span>
                 )}
               </div>
-              <button
-                onClick={next}
-                className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
-              >
-                {index + 1 >= questions.length ? "See results" : "Next"}
-              </button>
+              {q.explanation && (
+                <div className="rounded-lg border border-border bg-background px-3 py-2 text-xs text-muted-foreground">
+                  {q.explanation}
+                </div>
+              )}
+              <div className="flex justify-end">
+                <button
+                  onClick={next}
+                  className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
+                >
+                  {index + 1 >= questions.length ? "See results" : "Next"}
+                </button>
+              </div>
             </div>
           )}
         </div>

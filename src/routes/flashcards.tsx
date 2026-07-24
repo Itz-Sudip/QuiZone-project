@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, RotateCcw, ListChecks } from "lucide-react";
 import { dummyFlashcards } from "@/lib/dummy-data";
+import { loadStudySet } from "@/lib/study-store";
 
 export const Route = createFileRoute("/flashcards")({
   head: () => ({
@@ -15,10 +16,24 @@ export const Route = createFileRoute("/flashcards")({
   component: Flashcards,
 });
 
+type Card = { front: string; back: string };
+
 function Flashcards() {
-  const cards = dummyFlashcards;
+  const [cards, setCards] = useState<Card[]>(() =>
+    dummyFlashcards.map((c) => ({ front: c.front, back: c.back })),
+  );
+  const [title, setTitle] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+
+  useEffect(() => {
+    const set = loadStudySet();
+    if (set && set.flashcards.length > 0) {
+      setCards(set.flashcards.map((f) => ({ front: f.question, back: f.answer })));
+      setTitle(set.title ?? null);
+    }
+  }, []);
+
   const card = cards[index];
   const progress = ((index + 1) / cards.length) * 100;
 
@@ -41,6 +56,10 @@ function Flashcards() {
             <ListChecks className="h-3.5 w-3.5" /> Take quiz
           </Link>
         </div>
+
+        {title && (
+          <h1 className="mb-3 text-center text-lg font-semibold tracking-tight sm:text-xl">{title}</h1>
+        )}
 
         <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
           <span>Card {index + 1} of {cards.length}</span>
