@@ -77,14 +77,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { name: "theme-color", content: "#1a1d24" },
+      { title: "FlashGenius — Turn notes into flashcards & quizzes" },
+      { name: "description", content: "Paste your study notes and instantly generate flashcards and quizzes with FlashGenius." },
+      { property: "og:title", content: "FlashGenius" },
+      { property: "og:description", content: "Turn any notes into flashcards and quizzes in seconds." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
