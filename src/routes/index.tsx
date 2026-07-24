@@ -1,6 +1,9 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Sparkles, Brain, ListChecks } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Sparkles, Brain, ListChecks, AlertCircle } from "lucide-react";
+import { generateStudySet } from "@/lib/generate.functions";
+import { saveStudySet } from "@/lib/study-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -17,15 +20,31 @@ export const Route = createFileRoute("/")({
 function Landing() {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const generate = useServerFn(generateStudySet);
 
-  const handleGenerate = () => {
+  const canGenerate = notes.trim().length >= 10 && !loading;
+
+  const handleGenerate = async () => {
+    if (!canGenerate) return;
+    setError(null);
     setLoading(true);
-    // Dummy delay — real AI hookup goes here later
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const result = await generate({ data: { notes: notes.trim() } });
+      saveStudySet(result);
       navigate({ to: "/flashcards" });
-    }, 700);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Something went wrong";
+      setError(
+        msg.includes("429")
+          ? "Rate limit reached. Please try again in a moment."
+          : msg.includes("402")
+            ? "AI credits exhausted. Add credits in workspace billing."
+            : msg,
+      );
+      setLoading(false);
+    }
   };
 
   return (
@@ -57,14 +76,20 @@ function Landing() {
           />
           <button
             onClick={handleGenerate}
-            disabled={loading}
+            disabled={!canGenerate}
             className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
           >
-            <Sparkles className="h-4 w-4" />
+            <Sparkles className={`h-4 w-4 ${loading ? "animate-pulse" : ""}`} />
             {loading ? "Generating…" : "Generate"}
           </button>
+          {error && (
+            <div className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            Using sample study set for now — AI hookup coming soon.
+            {loading ? "Reading your notes and crafting your study set…" : "10 flashcards + a 5-question quiz, generated from your notes."}
           </p>
         </section>
 
