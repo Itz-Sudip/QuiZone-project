@@ -70,8 +70,6 @@ export const generateStudySet = createServerFn({ method: "POST" })
 
     const gateway = createLovableAiGatewayProvider(key);
     const model = gateway("google/gemini-2.5-flash");
-    void model;
-    const chosen = gateway("google/gemini-2.5-flash");
 
     const { text } = await generateText({
       model,
