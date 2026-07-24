@@ -15,7 +15,7 @@ export const dummyFlashcards: Flashcard[] = [
   { id: 6, front: "What is DNA?", back: "Deoxyribonucleic acid — the molecule that carries genetic instructions in living organisms." },
   { id: 7, front: "What is kinetic energy?", back: "The energy an object possesses due to its motion, calculated as ½mv²." },
   { id: 8, front: "Define entropy", back: "A measure of disorder or randomness in a thermodynamic system." },
-  { id: 9, front: "What is a catalyst?", base: undefined as never, back: "A substance that speeds up a chemical reaction without being consumed." },
+  { id: 9, front: "What is a catalyst?", back: "A substance that speeds up a chemical reaction without being consumed." },
   { id: 10, front: "What is gravity?", back: "The force by which a planet or other body draws objects toward its center." },
 ];
 
