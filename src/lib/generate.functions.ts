@@ -4,7 +4,15 @@ import { z } from "zod";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 import type { GeneratedStudySet } from "./study-types";
 
-const InputSchema = z.object({ notes: z.string().min(10) });
+const InputSchema = z.object({
+  notes: z.string().min(10),
+  profile: z
+    .object({
+      study_description: z.string().nullable().optional(),
+      exam: z.string().nullable().optional(),
+    })
+    .optional(),
+});
 
 const SCHEMA_TEMPLATE = `{
   "title": "string — short auto-generated title summarizing the notes topic",
@@ -24,8 +32,17 @@ const SCHEMA_TEMPLATE = `{
   "warnings": []
 }`;
 
-function buildPrompt(notes: string): string {
-  return `Convert the following study notes into flashcards and a quiz.
+function buildPrompt(notes: string, exam?: string | null, studyDescription?: string | null): string {
+  const profileBlock =
+    exam || studyDescription
+      ? `LEARNER PROFILE (use ONLY to bias tone and difficulty — never as a source of facts):
+- Exam being prepared for: ${exam || "(not specified)"}
+- Study description: ${studyDescription || "(not specified)"}
+
+`
+      : "";
+
+  return `${profileBlock}Convert the following study notes into flashcards and a quiz.
 
 STUDY NOTES:
 """
@@ -39,7 +56,7 @@ Requirements:
    - 2 medium questions (require connecting two related facts)
    - 1 hard question (requires reasoning or synthesis across the notes)
 3. Each quiz question must have exactly 4 options labeled A-D, with exactly one correct answer, plus a short explanation of why it's correct.
-4. Do not invent facts not supported by the notes.
+4. STRICT: Use ONLY facts explicitly present in the notes above. Do not invent, infer external facts, or add outside knowledge. If the learner profile mentions an exam or topic that is not in the notes, ignore it as a fact source — use it only to shape tone, phrasing, and question difficulty.
 5. If the notes are too short to fully satisfy the above, generate as many high-quality items as possible and list the shortfall in "warnings".
 
 Respond with a single JSON object matching this exact schema, no extra keys:
@@ -73,7 +90,7 @@ export const generateStudySet = createServerFn({ method: "POST" })
 
     const { text } = await generateText({
       model,
-      prompt: buildPrompt(data.notes),
+      prompt: buildPrompt(data.notes, data.profile?.exam, data.profile?.study_description),
     });
 
     const parsed = extractJson(text) as GeneratedStudySet;
