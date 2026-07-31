@@ -4,7 +4,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { Sparkles, Brain, ListChecks, AlertCircle, Plus, User, LogIn, Loader2 } from "lucide-react";
 import { generateStudySet } from "@/lib/generate.functions";
 import { getMyProfile, type Profile } from "@/lib/profile.functions";
-import { saveStudySet } from "@/lib/study-store";
+import {
+  saveStudySet,
+  saveNotes,
+  saveProfileContext,
+  resetAskedQuestions,
+} from "@/lib/study-store";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
@@ -64,15 +69,16 @@ function Landing() {
     setError(null);
     setLoading(true);
     try {
+      const profileContext = profile
+        ? { study_description: profile.study_description, exam: profile.exam }
+        : undefined;
       const result = await generate({
-        data: {
-          notes: notes.trim(),
-          profile: profile
-            ? { study_description: profile.study_description, exam: profile.exam }
-            : undefined,
-        },
+        data: { notes: notes.trim(), profile: profileContext },
       });
       saveStudySet(result);
+      saveNotes(notes.trim());
+      saveProfileContext(profileContext ?? null);
+      resetAskedQuestions();
       navigate({ to: "/flashcards" });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Something went wrong";
@@ -204,8 +210,8 @@ function Landing() {
             {loading
               ? "Reading your notes and crafting your study set…"
               : signedIn
-                ? "10 flashcards + a 5-question quiz, tailored to your exam profile."
-                : "10 flashcards + a 5-question quiz. Sign in to personalize for your exam."}
+                ? "10 flashcards + a 10-question quiz, tailored to your exam profile."
+                : "10 flashcards + a 10-question quiz. Sign in to personalize for your exam."}
           </p>
         </section>
 
