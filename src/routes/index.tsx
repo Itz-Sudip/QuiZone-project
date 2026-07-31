@@ -210,8 +210,8 @@ function Landing() {
             {loading
               ? "Reading your notes and crafting your study set…"
               : signedIn
-                ? "10 flashcards + a 5-question quiz, tailored to your exam profile."
-                : "10 flashcards + a 5-question quiz. Sign in to personalize for your exam."}
+                ? "10 flashcards + a 10-question quiz, tailored to your exam profile."
+                : "10 flashcards + a 10-question quiz. Sign in to personalize for your exam."}
           </p>
         </section>
 
