@@ -69,15 +69,16 @@ function Landing() {
     setError(null);
     setLoading(true);
     try {
+      const profileContext = profile
+        ? { study_description: profile.study_description, exam: profile.exam }
+        : undefined;
       const result = await generate({
-        data: {
-          notes: notes.trim(),
-          profile: profile
-            ? { study_description: profile.study_description, exam: profile.exam }
-            : undefined,
-        },
+        data: { notes: notes.trim(), profile: profileContext },
       });
       saveStudySet(result);
+      saveNotes(notes.trim());
+      saveProfileContext(profileContext ?? null);
+      resetAskedQuestions();
       navigate({ to: "/flashcards" });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Something went wrong";
