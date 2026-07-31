@@ -1,8 +1,29 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, X, Trophy, RotateCcw, Brain } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  ArrowLeft,
+  Check,
+  X,
+  Trophy,
+  RotateCcw,
+  Brain,
+  Sparkles,
+  Loader2,
+  ClipboardList,
+  AlertCircle,
+} from "lucide-react";
 import { dummyQuiz } from "@/lib/dummy-data";
-import { loadStudySet } from "@/lib/study-store";
+import {
+  addAskedQuestions,
+  loadAskedQuestions,
+  loadNotes,
+  loadProfileContext,
+  loadStudySet,
+  saveQuiz,
+} from "@/lib/study-store";
+import { generateNewQuiz } from "@/lib/generate.functions";
+import type { GeneratedQuizQuestion } from "@/lib/study-types";
 
 export const Route = createFileRoute("/quiz")({
   head: () => ({
@@ -26,6 +47,40 @@ type QQ = {
 
 const LETTERS = ["A", "B", "C", "D"] as const;
 
+function mapQuiz(quiz: GeneratedQuizQuestion[]): QQ[] {
+  return quiz.map((q) => {
+    const choices = LETTERS.map((l) => q.options[l]);
+    const correctIndex = LETTERS.indexOf(q.correctAnswer);
+    return {
+      question: q.question,
+      choices,
+      correctIndex: correctIndex >= 0 ? correctIndex : 0,
+      explanation: q.explanation,
+      difficulty: q.difficulty,
+    };
+  });
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function shuffleLocalQuiz(): QQ[] {
+  return shuffle(dummyQuiz).map((q) => {
+    const pairs = shuffle(q.choices.map((c, i) => ({ c, correct: i === q.correctIndex })));
+    return {
+      question: q.question,
+      choices: pairs.map((p) => p.c),
+      correctIndex: pairs.findIndex((p) => p.correct),
+    };
+  });
+}
+
 function Quiz() {
   const [questions, setQuestions] = useState<QQ[]>(() =>
     dummyQuiz.map((q) => ({
@@ -34,27 +89,24 @@ function Quiz() {
       correctIndex: q.correctIndex,
     })),
   );
+  const [isAiSet, setIsAiSet] = useState(false);
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
+  const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const newQuiz = useServerFn(generateNewQuiz);
 
   useEffect(() => {
     const set = loadStudySet();
     if (set && set.quiz.length > 0) {
-      setQuestions(
-        set.quiz.map((q) => {
-          const choices = LETTERS.map((l) => q.options[l]);
-          const correctIndex = LETTERS.indexOf(q.correctAnswer);
-          return {
-            question: q.question,
-            choices,
-            correctIndex: correctIndex >= 0 ? correctIndex : 0,
-            explanation: q.explanation,
-            difficulty: q.difficulty,
-          };
-        }),
-      );
+      setQuestions(mapQuiz(set.quiz));
+      setIsAiSet(true);
+      addAskedQuestions(set.quiz.map((q) => q.question));
     }
   }, []);
 
@@ -64,6 +116,11 @@ function Quiz() {
   const pick = (i: number) => {
     if (selected !== null) return;
     setSelected(i);
+    setAnswers((prev) => {
+      const next = [...prev];
+      next[index] = i;
+      return next;
+    });
     if (i === q.correctIndex) setScore((s) => s + 1);
   };
 
@@ -76,12 +133,136 @@ function Quiz() {
     }
   };
 
-  const restart = () => {
+  const resetRun = () => {
     setIndex(0);
     setSelected(null);
+    setAnswers([]);
     setScore(0);
     setDone(false);
+    setReviewing(false);
   };
+
+  const handleAnotherQuiz = async () => {
+    setError(null);
+    const notes = loadNotes();
+    if (!isAiSet || !notes) {
+      setQuestions(shuffleLocalQuiz());
+      resetRun();
+      return;
+    }
+    setRegenerating(true);
+    try {
+      const result = await newQuiz({
+        data: {
+          notes,
+          previousQuestions: loadAskedQuestions(),
+          profile: loadProfileContext(),
+        },
+      });
+      setQuestions(mapQuiz(result.quiz));
+      saveQuiz(result.quiz);
+      addAskedQuestions(result.quiz.map((item) => item.question));
+      resetRun();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Something went wrong";
+      setError(
+        msg.includes("429")
+          ? "Rate limit reached. Please try again in a moment."
+          : msg.includes("402")
+            ? "AI credits exhausted. Add credits in workspace billing."
+            : msg,
+      );
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  if (reviewing) {
+    return (
+      <main className="min-h-screen px-5 py-6 sm:py-10">
+        <div className="mx-auto w-full max-w-xl">
+          <div className="mb-5 flex items-center justify-between">
+            <button
+              onClick={() => setReviewing(false)}
+              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" /> Results
+            </button>
+            <span className="text-xs text-muted-foreground">
+              {score}/{questions.length} correct
+            </span>
+          </div>
+
+          <h1 className="mb-4 text-xl font-semibold tracking-tight">Review your answers</h1>
+
+          <div className="flex flex-col gap-3">
+            {questions.map((item, qi) => {
+              const picked = answers[qi] ?? null;
+              const wasCorrect = picked === item.correctIndex;
+              return (
+                <div key={qi} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span
+                      className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${
+                        wasCorrect
+                          ? "bg-[color-mix(in_oklab,var(--success)_20%,transparent)] text-[color:var(--success)]"
+                          : "bg-destructive/15 text-destructive"
+                      }`}
+                    >
+                      {wasCorrect ? "✓" : "✕"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Question {qi + 1}
+                      {item.difficulty ? ` · ${item.difficulty}` : ""}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium">{item.question}</p>
+                  <div className="mt-3 flex flex-col gap-1.5">
+                    {item.choices.map((choice, ci) => {
+                      const isCorrect = ci === item.correctIndex;
+                      const isPicked = picked === ci;
+                      let cls =
+                        "flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs";
+                      if (isCorrect)
+                        cls +=
+                          " border-[color:var(--success)] bg-[color-mix(in_oklab,var(--success)_12%,transparent)]";
+                      else if (isPicked) cls += " border-destructive bg-destructive/10";
+                      else cls += " opacity-70";
+                      return (
+                        <div key={ci} className={cls}>
+                          <span>
+                            <span className="mr-2 text-muted-foreground">{LETTERS[ci]}.</span>
+                            {choice}
+                          </span>
+                          {isCorrect && <Check className="h-3.5 w-3.5 text-[color:var(--success)]" />}
+                          {isPicked && !isCorrect && <X className="h-3.5 w-3.5 text-destructive" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {picked === null && (
+                    <p className="mt-2 text-xs text-muted-foreground">You skipped this question.</p>
+                  )}
+                  {item.explanation && (
+                    <div className="mt-3 rounded-lg border border-border bg-background px-3 py-2 text-xs text-muted-foreground">
+                      {item.explanation}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => setReviewing(false)}
+            className="mt-5 w-full rounded-xl border border-border bg-card py-3 text-sm font-medium hover:border-primary/50"
+          >
+            Back to results
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   if (done) {
     const pct = Math.round((score / questions.length) * 100);
@@ -101,20 +282,46 @@ function Quiz() {
             </div>
             <div className="mt-1 text-sm text-muted-foreground">{pct}% correct</div>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2">
             <button
-              onClick={restart}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90"
+              onClick={handleAnotherQuiz}
+              disabled={regenerating}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-60"
             >
-              <RotateCcw className="h-4 w-4" /> Retry
+              {regenerating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              {regenerating ? "Building a new quiz…" : "Take another quiz"}
             </button>
-            <Link
-              to="/flashcards"
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium hover:border-primary/50"
+            <button
+              onClick={() => setReviewing(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium hover:border-primary/50"
             >
-              <Brain className="h-4 w-4" /> Review cards
-            </Link>
+              <ClipboardList className="h-4 w-4" /> Review this quiz
+            </button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                onClick={resetRun}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium hover:border-primary/50"
+              >
+                <RotateCcw className="h-4 w-4" /> Retry same quiz
+              </button>
+              <Link
+                to="/flashcards"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium hover:border-primary/50"
+              >
+                <Brain className="h-4 w-4" /> Review cards
+              </Link>
+            </div>
           </div>
+          {error && (
+            <div className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-left text-xs text-destructive">
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
           <Link to="/" className="mt-4 inline-block text-xs text-muted-foreground hover:text-foreground">
             Back to home
           </Link>
