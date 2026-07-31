@@ -15,9 +15,9 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "FlashGenius — Study smarter" },
+      { title: "QuiZone — Study smarter" },
       { name: "description", content: "Paste your notes and generate flashcards & quizzes instantly." },
-      { property: "og:title", content: "FlashGenius — Study smarter" },
+      { property: "og:title", content: "QuiZone — Study smarter" },
       { property: "og:description", content: "Paste your notes and generate flashcards & quizzes instantly." },
     ],
   }),
@@ -120,7 +120,7 @@ function Landing() {
       <div className="mx-auto w-full max-w-2xl">
         <nav className="mb-8 flex items-center justify-between">
           <div className="text-sm font-semibold tracking-tight">
-            Flash<span className="text-primary">Genius</span>
+            Qui<span className="text-primary">Zone</span>
           </div>
           {signedIn ? (
             <Link
@@ -146,7 +146,7 @@ function Landing() {
             AI study companion
           </div>
           <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-            Flash<span className="text-primary">Genius</span>
+            Qui<span className="text-primary">Zone</span>
           </h1>
           <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground sm:text-base">
             Paste your notes or upload a document. Get flashcards and a quiz in seconds — using only facts from your notes.
