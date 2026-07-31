@@ -4,7 +4,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { Sparkles, Brain, ListChecks, AlertCircle, Plus, User, LogIn, Loader2 } from "lucide-react";
 import { generateStudySet } from "@/lib/generate.functions";
 import { getMyProfile, type Profile } from "@/lib/profile.functions";
-import { saveStudySet } from "@/lib/study-store";
+import {
+  saveStudySet,
+  saveNotes,
+  saveProfileContext,
+  resetAskedQuestions,
+} from "@/lib/study-store";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
