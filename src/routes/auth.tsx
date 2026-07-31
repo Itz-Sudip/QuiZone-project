@@ -7,9 +7,9 @@ import { lovable } from "@/integrations/lovable";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — FlashGenius" },
+      { title: "Sign in — QuiZone" },
       { name: "description", content: "Sign in to save your study profile and generate exam-focused study sets." },
-      { property: "og:title", content: "Sign in — FlashGenius" },
+      { property: "og:title", content: "Sign in — QuiZone" },
       { property: "og:description", content: "Sign in to save your study profile and generate exam-focused study sets." },
     ],
   }),

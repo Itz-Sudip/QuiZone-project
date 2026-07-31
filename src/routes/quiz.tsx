@@ -28,9 +28,9 @@ import type { GeneratedQuizQuestion } from "@/lib/study-types";
 export const Route = createFileRoute("/quiz")({
   head: () => ({
     meta: [
-      { title: "Quiz — FlashGenius" },
+      { title: "Quiz — QuiZone" },
       { name: "description", content: "Test your knowledge with instant feedback." },
-      { property: "og:title", content: "Quiz — FlashGenius" },
+      { property: "og:title", content: "Quiz — QuiZone" },
       { property: "og:description", content: "Test your knowledge with instant feedback." },
     ],
   }),

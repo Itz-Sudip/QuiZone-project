@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
     meta: [
-      { title: "Your profile — FlashGenius" },
+      { title: "Your profile — QuiZone" },
       { name: "description", content: "Set your study description and the exam you're preparing for." },
     ],
   }),
@@ -86,7 +86,7 @@ function ProfilePage() {
         <header className="mb-8">
           <h1 className="text-3xl font-semibold tracking-tight">Your study profile</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Tell FlashGenius what you're studying and which exam you're preparing for. We'll bias the tone and difficulty of your flashcards and quizzes to match — while sticking strictly to facts in your notes.
+            Tell QuiZone what you're studying and which exam you're preparing for. We'll bias the tone and difficulty of your flashcards and quizzes to match — while sticking strictly to facts in your notes.
           </p>
         </header>
 

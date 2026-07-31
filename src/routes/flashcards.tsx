@@ -7,9 +7,9 @@ import { loadStudySet } from "@/lib/study-store";
 export const Route = createFileRoute("/flashcards")({
   head: () => ({
     meta: [
-      { title: "Flashcards — FlashGenius" },
+      { title: "Flashcards — QuiZone" },
       { name: "description", content: "Flip through your study flashcards." },
-      { property: "og:title", content: "Flashcards — FlashGenius" },
+      { property: "og:title", content: "Flashcards — QuiZone" },
       { property: "og:description", content: "Flip through your study flashcards." },
     ],
   }),
